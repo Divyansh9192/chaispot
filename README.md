@@ -6,8 +6,8 @@ ChaiSpot is a full-stack web application for finding chai shops on an interactiv
 
 ## Live URL
 
-<!-- Replace with your deployed URL once hosted -->
-> **Not yet deployed** — follow the local setup below to run it on your machine.
+- Live: https://chaispot.vercel.app
+- Repository: https://github.com/Divyansh9192/chaispot
 
 ---
 
@@ -35,7 +35,7 @@ ChaiSpot is a full-stack web application for finding chai shops on an interactiv
 ### 1. Clone the repo
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Divyansh9192/chaispot
 cd chaispot
 ```
 
