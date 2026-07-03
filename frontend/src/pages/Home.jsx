@@ -26,6 +26,8 @@ export default function Home() {
   const [panelOpen, setPanelOpen] = useState(true);
 
   const [userLoc, setUserLoc] = useState(null);
+  const [manualLoc, setManualLoc] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
 
   const [dirLoading, setDirLoading] = useState(false);
   const [dirInfo, setDirInfo] = useState(null);
@@ -210,16 +212,31 @@ export default function Home() {
       if (userLoc) {
         origin = userLoc;
       } else {
+        // Always try GPS first
         try {
           const pos = await new Promise((resolve, reject) =>
             navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
           );
           origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           setUserLoc(origin);
+          setShowManualInput(false);
         } catch {
-          toast.error('Please allow location access to get directions.');
-          setDirLoading(false);
-          return;
+          // GPS failed — check if manual location is available
+          if (manualLoc.trim()) {
+            const parts = manualLoc.split(',').map(s => s.trim());
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+              origin = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
+            } else {
+              toast.error('Invalid format. Enter as "lat, lng" (e.g. 28.61, 77.21)');
+              setDirLoading(false);
+              return;
+            }
+          } else {
+            toast.error('Location blocked by browser. Enter your location manually.');
+            setShowManualInput(true);
+            setDirLoading(false);
+            return;
+          }
         }
       }
 
@@ -355,6 +372,49 @@ export default function Home() {
           <div className="map-loading-overlay">
             <div className="spinner" />
             <span>Getting directions...</span>
+          </div>
+        )}
+
+        {showManualInput && (
+          <div className="map-overlay-bottom-left">
+            <div className="location-control glass-card">
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 8 }}>
+                📍 GPS blocked — enter your location:
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  className="loc-manual-input"
+                  placeholder="lat, lng (e.g. 28.61, 77.21)"
+                  value={manualLoc}
+                  onChange={e => setManualLoc(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && activeShop) handleGetDirections(activeShop);
+                  }}
+                  id="manual-location-input"
+                />
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    if (!manualLoc.trim()) { toast.error('Enter your coordinates first.'); return; }
+                    const parts = manualLoc.split(',').map(s => s.trim());
+                    if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) {
+                      toast.error('Invalid format. Use "lat, lng"');
+                      return;
+                    }
+                    const loc = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
+                    setUserLoc(loc);
+                    setShowManualInput(false);
+                    toast.success('Location set! Click Get Directions again.');
+                    if (mapInstance.current) {
+                      mapInstance.current.flyTo({ center: [loc.lng, loc.lat], zoom: 13, duration: 800 });
+                    }
+                  }}
+                  style={{ padding: '5px 10px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                >
+                  Set
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

@@ -24,6 +24,8 @@ export default function ShopDetail() {
 
   const [dirInfo, setDirInfo] = useState(null);
   const [dirLoading, setDirLoading] = useState(false);
+  const [manualLoc, setManualLoc] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
 
   const load = async () => {
     try {
@@ -107,10 +109,34 @@ useLayoutEffect(() => {
   const getDirections = async () => {
     setDirLoading(true);
     try {
-      const pos = await new Promise((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
-      );
-      const origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      let origin;
+
+      // Always try GPS first
+      try {
+        const pos = await new Promise((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
+        );
+        origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setShowManualInput(false);
+      } catch {
+        // GPS failed — check if manual location is available
+        if (manualLoc.trim()) {
+          const parts = manualLoc.split(',').map(s => s.trim());
+          if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            origin = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
+          } else {
+            toast.error('Invalid format. Enter as "lat, lng" (e.g. 28.61, 77.21)');
+            setDirLoading(false);
+            return;
+          }
+        } else {
+          toast.error('Location blocked by browser. Enter your location manually.');
+          setShowManualInput(true);
+          setDirLoading(false);
+          return;
+        }
+      }
+
       const [lng, lat] = shop.location.coordinates;
       const data = await api.getDirections(origin, { lat, lng });
       const route = data.route;
@@ -138,7 +164,7 @@ useLayoutEffect(() => {
         map.fitBounds(bounds, { padding: 60 });
       }
     } catch (err) {
-      toast.error(err.message || 'Please allow location access to get directions.');
+      toast.error(err.message || 'Could not get directions.');
     }
     setDirLoading(false);
   };
@@ -169,6 +195,26 @@ useLayoutEffect(() => {
         <button className="btn btn-secondary" onClick={getDirections} disabled={dirLoading}>
           {dirLoading ? 'Getting route...' : '🧭 Get Directions'}
         </button>
+        {showManualInput && (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input
+              className="input-field"
+              placeholder="lat, lng (e.g. 28.61, 77.21)"
+              value={manualLoc}
+              onChange={e => setManualLoc(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && getDirections()}
+              style={{ padding: '8px 12px', fontSize: '0.85rem', width: '220px' }}
+              id="detail-manual-location"
+            />
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={getDirections}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              Go
+            </button>
+          </div>
+        )}
         {dirInfo && (
           <div className="direction-info">
             <div className="di-item"><span className="di-label">Distance</span><span className="di-value">{dirInfo.distance}</span></div>
