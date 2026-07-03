@@ -111,25 +111,24 @@ useLayoutEffect(() => {
     try {
       let origin;
 
-      // Always try GPS first
-      try {
-        const pos = await new Promise((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
-        );
-        origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setShowManualInput(false);
-      } catch {
-        // GPS failed — check if manual location is available
-        if (manualLoc.trim()) {
-          const parts = manualLoc.split(',').map(s => s.trim());
-          if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-            origin = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
-          } else {
-            toast.error('Invalid format. Enter as "lat, lng" (e.g. 28.61, 77.21)');
-            setDirLoading(false);
-            return;
-          }
+      // Use manual location if provided, otherwise try GPS
+      if (manualLoc.trim()) {
+        const parts = manualLoc.split(',').map(s => s.trim());
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          origin = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
         } else {
+          toast.error('Invalid format. Enter as "lat, lng" (e.g. 28.61, 77.21)');
+          setDirLoading(false);
+          return;
+        }
+      } else {
+        try {
+          const pos = await new Promise((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
+          );
+          origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setShowManualInput(false);
+        } catch {
           toast.error('Location blocked by browser. Enter your location manually.');
           setShowManualInput(true);
           setDirLoading(false);

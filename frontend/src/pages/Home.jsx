@@ -17,6 +17,7 @@ export default function Home() {
   const popupRef = useRef(null);
   const userMarkerRef = useRef(null);
   const routeDrawn = useRef(false);
+  const directionsHandlerRef = useRef(null);
 
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -185,10 +186,10 @@ export default function Home() {
     setTimeout(() => {
       const dirBtn = document.getElementById(`popup-directions-${shop._id}`);
       const viewBtn = document.getElementById(`popup-view-${shop._id}`);
-      if (dirBtn) dirBtn.addEventListener('click', () => handleGetDirections(shop));
+      if (dirBtn) dirBtn.addEventListener('click', () => directionsHandlerRef.current?.(shop));
       if (viewBtn) viewBtn.addEventListener('click', () => navigate(`/shop/${shop._id}`));
     }, 50);
-  }, [navigate, userLoc]);
+  }, [navigate]);
 
   const clearRoute = () => {
     const map = mapInstance.current;
@@ -209,10 +210,20 @@ export default function Home() {
     try {
       let origin;
 
-      if (userLoc) {
+      // Use manual location if provided
+      if (manualLoc.trim()) {
+        const parts = manualLoc.split(',').map(s => s.trim());
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          origin = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
+        } else {
+          toast.error('Invalid format. Enter as "lat, lng" (e.g. 28.61, 77.21)');
+          setDirLoading(false);
+          return;
+        }
+      } else if (userLoc) {
         origin = userLoc;
       } else {
-        // Always try GPS first
+        // Try GPS
         try {
           const pos = await new Promise((resolve, reject) =>
             navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
@@ -221,22 +232,10 @@ export default function Home() {
           setUserLoc(origin);
           setShowManualInput(false);
         } catch {
-          // GPS failed — check if manual location is available
-          if (manualLoc.trim()) {
-            const parts = manualLoc.split(',').map(s => s.trim());
-            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-              origin = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
-            } else {
-              toast.error('Invalid format. Enter as "lat, lng" (e.g. 28.61, 77.21)');
-              setDirLoading(false);
-              return;
-            }
-          } else {
-            toast.error('Location blocked by browser. Enter your location manually.');
-            setShowManualInput(true);
-            setDirLoading(false);
-            return;
-          }
+          toast.error('Location blocked by browser. Enter your location manually.');
+          setShowManualInput(true);
+          setDirLoading(false);
+          return;
         }
       }
 
@@ -305,6 +304,8 @@ export default function Home() {
 
     setDirLoading(false);
   };
+
+  directionsHandlerRef.current = handleGetDirections;
 
   const handleShopCardClick = (shop) => {
     const map = mapInstance.current;
