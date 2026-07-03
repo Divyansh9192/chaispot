@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL || 'https://chaispot.onrender.com/api';
 
 function getToken() {
   return localStorage.getItem('chaispot_token');
