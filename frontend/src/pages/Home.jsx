@@ -26,9 +26,6 @@ export default function Home() {
   const [panelOpen, setPanelOpen] = useState(true);
 
   const [userLoc, setUserLoc] = useState(null);
-  const [manualLoc, setManualLoc] = useState('');
-  const [locMode, setLocMode] = useState('auto');
-  const [locLoading, setLocLoading] = useState(false);
 
   const [dirLoading, setDirLoading] = useState(false);
   const [dirInfo, setDirInfo] = useState(null);
@@ -189,7 +186,7 @@ export default function Home() {
       if (dirBtn) dirBtn.addEventListener('click', () => handleGetDirections(shop));
       if (viewBtn) viewBtn.addEventListener('click', () => navigate(`/shop/${shop._id}`));
     }, 50);
-  }, [navigate, userLoc, locMode, manualLoc]);
+  }, [navigate, userLoc]);
 
   const clearRoute = () => {
     const map = mapInstance.current;
@@ -210,15 +207,7 @@ export default function Home() {
     try {
       let origin;
 
-      if (locMode === 'manual' && manualLoc.trim()) {
-        const parts = manualLoc.split(',').map(s => s.trim());
-        if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) {
-          toast.error('Enter location as "latitude, longitude" (e.g. 28.61, 77.21)');
-          setDirLoading(false);
-          return;
-        }
-        origin = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
-      } else if (userLoc) {
+      if (userLoc) {
         origin = userLoc;
       } else {
         try {
@@ -228,8 +217,7 @@ export default function Home() {
           origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           setUserLoc(origin);
         } catch {
-          toast.error('Could not get your location. Try entering it manually.');
-          setLocMode('manual');
+          toast.error('Please allow location access to get directions.');
           setDirLoading(false);
           return;
         }

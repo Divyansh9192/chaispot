@@ -138,7 +138,7 @@ useLayoutEffect(() => {
         map.fitBounds(bounds, { padding: 60 });
       }
     } catch (err) {
-      toast.error(err.message || 'Could not get directions. Make sure location is enabled.');
+      toast.error(err.message || 'Please allow location access to get directions.');
     }
     setDirLoading(false);
   };
